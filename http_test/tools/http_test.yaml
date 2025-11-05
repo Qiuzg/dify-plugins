@@ -1,0 +1,76 @@
+identity:
+  name: "http_test"
+  author: "zgqiu"
+  label:
+    en_US: "http_test"
+    zh_Hans: "http_test"
+    pt_BR: "http_test"
+description:
+  human:
+    en_US: "http test"
+    zh_Hans: "http test"
+    pt_BR: "http test"
+  llm: "http test"
+parameters:
+  - name: file_name
+    type: files
+    required: true
+    label:
+      en_US: files
+      zh_Hans: 文件
+      pt_BR: files
+      ja_JP: files
+    human_description:
+      en_US: "file"
+      zh_Hans: "文件内容"
+      pt_BR: "test"
+      ja_JP: "test"
+    llm_description: "test"
+    form: llm
+  - name: query
+    type: string
+    required: true
+    label:
+        en_US: query
+        zh_Hans: 问题
+    human_description:
+        en_US: The main content for the Telegraph page, written in Markdown format.
+        zh_Hans: Telegraph 页面的主要内容，请使用 Markdown 格式编写。
+    llm_description: "dify"
+    form: llm
+  - name: history
+    type: string
+    required: true
+    label:
+      en_US: history
+      zh_Hans: 历史信息
+    human_description:
+      en_US: The main content for the Telegraph page, written in Markdown format.
+      zh_Hans: Telegraph 页面的主要内容，请使用 Markdown 格式编写。
+    llm_description: "dify"
+    form: llm
+  - name: url
+    type: string
+    required: true
+    label:
+      en_US: url
+      zh_Hans: 请求地址
+    human_description:
+      en_US: The main content for the Telegraph page, written in Markdown format.
+      zh_Hans: Telegraph 页面的主要内容，请使用 Markdown 格式编写。
+    llm_description: "dify"
+    form: llm
+  - name: time_out
+    type: number
+    required: true
+    label:
+      en_US: time_out
+      zh_Hans: 超时时间
+    human_description:
+      en_US: The main content for the Telegraph page, written in Markdown format.
+      zh_Hans: Telegraph 页面的主要内容，请使用 Markdown 格式编写。
+    llm_description: "dify"
+    form: llm
+extra:
+  python:
+    source: tools/http_test.py

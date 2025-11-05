@@ -1,0 +1,43 @@
+version: 0.0.1
+type: plugin
+author: zgqiu
+name: openai_compatible_proxy
+label:
+  en_US: openai_compatible_proxy
+  ja_JP: openai_compatible_proxy
+  zh_Hans: openai_compatible_proxy
+  pt_BR: openai_compatible_proxy
+description:
+  en_US: 使用代理链接火山引擎
+  ja_JP: 使用代理链接火山引擎
+  zh_Hans: 使用代理链接火山引擎
+  pt_BR: 使用代理链接火山引擎
+icon: icon.svg
+icon_dark: icon-dark.svg
+resource:
+  memory: 268435456
+  permission:
+    model:
+      enabled: true
+      llm: true
+      text_embedding: false
+      rerank: false
+      tts: false
+      speech2text: false
+      moderation: false
+plugins:
+  models:
+    - provider/openai_compatible_proxy.yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: 1.8.0
+created_at: 2025-10-27T18:08:47.061543+08:00
+privacy: PRIVACY.md
+verified: false

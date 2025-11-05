@@ -1,0 +1,30 @@
+identity:
+  name: "file_test"
+  author: "zgqiu"
+  label:
+    en_US: "file_test"
+    zh_Hans: "file_test"
+    pt_BR: "file_test"
+description:
+  human:
+    en_US: "文件读取测试"
+    zh_Hans: "文件读取测试"
+    pt_BR: "文件读取测试"
+  llm: "文件读取测试"
+parameters:
+  - name: query
+    type: file
+    required: true
+    label:
+      en_US: Query string
+      zh_Hans: 查询语句
+      pt_BR: Query string
+    human_description:
+      en_US: "文件读取测试"
+      zh_Hans: "文件读取测试"
+      pt_BR: "文件读取测试"
+    llm_description: "文件读取测试"
+    form: llm
+extra:
+  python:
+    source: tools/file_test.py

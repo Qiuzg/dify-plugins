@@ -1,0 +1,103 @@
+provider: vol_network
+mode: chat
+label:
+  en_US: "VolNetwork"
+description:
+  en_US: "Models provided by vol_network."
+  zh_Hans: "火山引擎提供的网络，用于实现调用互联网服务"
+icon_small:
+  en_US: "icon.svg"
+icon_large:
+  en_US: "icon-dark.svg"
+background: "#E5E7EB"
+help:
+  title:
+    en_US: "Get your API Key from vol_network"
+    zh_Hans: "从 VolNetwork 获取 API Key"
+  url:
+    en_US: "https://__put_your_url_here__/account/api-keys"
+supported_model_types:
+  - llm
+configurate_methods:
+  - customizable-model
+model_credential_schema:
+  model:
+    label:
+      en_US: Model Name
+      zh_Hans: 模型名称
+    placeholder:
+      en_US: Enter your model name
+      zh_Hans: 输入模型名称
+
+  credential_form_schemas:
+    - variable: mode
+      label:
+        en_US: Completion mode
+      type: select
+      required: true
+      default: chat
+      placeholder:
+        zh_Hans: 选择对话类型
+        en_US: Select completion mode
+      options:
+        - value: completion
+          label:
+            en_US: Completion
+            zh_Hans: 补全
+        - value: chat
+          label:
+            en_US: Chat
+            zh_Hans: 对话
+    - variable: openai_api_key
+      label:
+        en_US: API Key
+      type: secret-input
+      required: true
+      placeholder:
+        zh_Hans: 在此输入您的 API Key
+        en_US: Enter your API Key
+    - variable: bot_id
+      label:
+        en_US: Bot Id
+        zh_Hans: 机器人Id
+      type: text-input
+      required: false
+      placeholder:
+        zh_Hans: 在此输入您的机器人Id
+        en_US: Enter your Bot id
+
+    - variable: proxy_host
+      label:
+        en_US: Proxy Host
+        zh_Hans: 代理地址
+      type: text-input
+      required: false
+      placeholder:
+        zh_Hans: 在此输入您的代理地址
+        en_US: Enter your Proxy Host
+
+    - variable: openai_api_base
+      label:
+        en_US: API Base
+        zh_Hans: 服务地址
+      type: text-input
+      required: false
+      placeholder:
+        zh_Hans: 在此输入您的服务地址
+        en_US: Enter your API Base
+
+    - variable: reference
+      label:
+        en_US: Reference
+        zh_Hans: 是否需要参考链接
+      type: text-input
+      required: false
+      placeholder:
+        zh_Hans: 在此输入您是否需要参考链接，1需要详细参考链接，2返回参考链接的数量，0不需要参考链接
+        en_US: Need reference
+
+extra:
+  python:
+    provider_source: provider/vol_network.py
+    model_sources:
+      - "models/llm/llm.py"

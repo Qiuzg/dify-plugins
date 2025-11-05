@@ -1,0 +1,41 @@
+identity:
+  name: "md2docx"
+  author: "zgqiu"
+  label:
+    en_US: "md2docx"
+    zh_Hans: "md2docx"
+    pt_BR: "md2docx"
+description:
+  human:
+    en_US: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+    zh_Hans: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+    pt_BR: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+  llm: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+parameters:
+  - name: content
+    type: string
+    required: true
+    label:
+      en_US: content
+      zh_Hans: 大模型生成的md文档
+    human_description:
+      en_US: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+      zh_Hans: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+      pt_BR: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+    llm_description: The Markdown content that will be converted to a Word document
+    form: llm
+  - name: name
+    type: string
+    required: true
+    label:
+      en_US: name
+      zh_Hans: 输出文件名称
+    human_description:
+      en_US: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+      zh_Hans: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+      pt_BR: "满足AI润色需求，将模型生成的润色结果转为docx文档"
+    llm_description: The title that will be displayed at the top of the Word document
+    form: llm
+extra:
+  python:
+    source: tools/md2docx.py

@@ -1,0 +1,30 @@
+identity:
+  name: "document-extractor"
+  author: "zgqiu"
+  label:
+    en_US: "document-extractor"
+    zh_Hans: "document-extractor"
+    pt_BR: "document-extractor"
+description:
+  human:
+    en_US: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+    zh_Hans: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+    pt_BR: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+  llm: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+parameters:
+  - name: document
+    type: file
+    required: true
+    label:
+      en_US: document
+      zh_Hans: 用户上传文档
+      pt_BR: Query string
+    human_description:
+      en_US: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+      zh_Hans: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+      pt_BR: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+    llm_description: "文档信息抽取器，由于系统自带的抽取节点不能抽取文档中的图片，因此需要扩展开发"
+    form: llm
+extra:
+  python:
+    source: tools/document-extractor.py

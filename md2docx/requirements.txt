@@ -1,0 +1,7 @@
+dify_plugin>=0.2.0,<0.3.0
+python-docx==1.1.2
+markdown==3.7
+requests==2.32.3
+Pillow==11.0.0
+beautifulsoup4==4.12.3
+lxml==5.3.0

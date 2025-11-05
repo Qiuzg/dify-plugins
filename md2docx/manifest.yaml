@@ -1,0 +1,38 @@
+version: 0.0.1
+type: plugin
+author: zgqiu
+name: md2docx
+label:
+  en_US: md2docx
+  ja_JP: md2docx
+  zh_Hans: md2docx
+  pt_BR: md2docx
+description:
+  en_US: 满足AI润色需求，将模型生成的润色结果转为docx文档
+  ja_JP: 满足AI润色需求，将模型生成的润色结果转为docx文档
+  zh_Hans: 满足AI润色需求，将模型生成的润色结果转为docx文档
+  pt_BR: 满足AI润色需求，将模型生成的润色结果转为docx文档
+icon: icon.svg
+icon_dark: icon-dark.svg
+resource:
+  memory: 268435456
+  permission:
+    storage:
+      enabled: true
+      size: 1048576
+plugins:
+  tools:
+    - provider/md2docx.yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: 1.8.0
+created_at: 2025-10-29T17:59:02.778689+08:00
+privacy: PRIVACY.md
+verified: false

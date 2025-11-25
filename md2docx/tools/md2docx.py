@@ -6,8 +6,6 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 
 import os
 import re
-import sys
-from pathlib import Path
 from typing import List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 import requests
@@ -17,6 +15,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT, WD_LINE_SPACING
 from docx.oxml.ns import qn
 from io import BytesIO
 from PIL import Image
+import traceback
 
 
 class MarkdownParser:
@@ -86,6 +85,158 @@ class MarkdownParser:
 
         return table_data, i
 
+    def _is_list_item(self, line: str) -> Tuple[bool, Optional[str], Optional[str]]:
+        """
+        判断是否是列表项，返回 (是否列表, 列表类型, 列表内容)
+        列表类型: 'unordered' 或 'ordered'
+        """
+        stripped = line.strip()
+
+        # 无序列表: -, *, +
+        unordered_match = re.match(r'^([-*+])\s+(.+)$', stripped)
+        if unordered_match:
+            return True, 'unordered', unordered_match.group(2)
+
+        # 有序列表: 1. 2. 等
+        ordered_match = re.match(r'^\d+\.\s+(.+)$', stripped)
+        if ordered_match:
+            return True, 'ordered', ordered_match.group(1)
+
+        return False, None, None
+
+    def _parse_list(self, start_idx: int) -> Tuple[dict, int]:
+        """解析列表，返回列表数据和下一行索引"""
+        list_items = []
+        list_type = None
+        i = start_idx
+
+        while i < len(self.lines):
+            line = self.lines[i]
+            is_list, item_type, content = self._is_list_item(line)
+
+            if not is_list:
+                # 检查是否是空行（列表可能继续）
+                if not line.strip():
+                    # 如果下一行也是空行或不是列表，则结束列表
+                    if i + 1 >= len(self.lines) or not self.lines[i + 1].strip():
+                        break
+                    # 检查下一行是否是列表
+                    next_is_list, _, _ = self._is_list_item(self.lines[i + 1])
+                    if not next_is_list:
+                        break
+                    i += 1
+                    continue
+                else:
+                    break
+
+            # 确定列表类型（第一次遇到时）
+            if list_type is None:
+                list_type = item_type
+
+            # 只处理相同类型的列表项
+            if item_type == list_type:
+                list_items.append({
+                    'content': content,
+                    'type': item_type
+                })
+            else:
+                break
+
+            i += 1
+
+        if not list_items:
+            return None, start_idx + 1
+
+        list_data = {
+            'type': 'list',
+            'list_type': list_type,
+            'items': list_items
+        }
+
+        return list_data, i
+
+    def _parse_inline_formatting(self, text: str) -> List[dict]:
+        """
+        解析行内格式（加粗、斜体等）
+        返回格式化的文本片段列表
+        每个片段格式: {'text': str, 'bold': bool, 'italic': bool}
+        """
+        parts = []
+        # 匹配加粗和斜体的模式
+        # 优先级：加粗 > 斜体
+        pattern = r'(\*\*\*([^*]+)\*\*\*|\*\*([^*]+)\*\*|\*([^*]+)\*|__([^_]+)__|_([^_]+)_)'
+
+        last_pos = 0
+        for match in re.finditer(pattern, text):
+            # 添加匹配前的普通文本
+            if match.start() > last_pos:
+                parts.append({
+                    'text': text[last_pos:match.start()],
+                    'bold': False,
+                    'italic': False
+                })
+
+            # 处理匹配的格式
+            full_match = match.group(0)
+            # 加粗斜体: ***text***
+            if full_match.startswith('***') and full_match.endswith('***'):
+                content = match.group(2)
+                parts.append({
+                    'text': content,
+                    'bold': True,
+                    'italic': True
+                })
+            # 加粗: **text** 或 __text__
+            elif full_match.startswith('**') and full_match.endswith('**'):
+                content = match.group(3)
+                parts.append({
+                    'text': content,
+                    'bold': True,
+                    'italic': False
+                })
+            elif full_match.startswith('__') and full_match.endswith('__'):
+                content = match.group(5)
+                parts.append({
+                    'text': content,
+                    'bold': True,
+                    'italic': False
+                })
+            # 斜体: *text* 或 _text_
+            elif full_match.startswith('*') and full_match.endswith('*'):
+                content = match.group(4)
+                parts.append({
+                    'text': content,
+                    'bold': False,
+                    'italic': True
+                })
+            elif full_match.startswith('_') and full_match.endswith('_'):
+                content = match.group(6)
+                parts.append({
+                    'text': content,
+                    'bold': False,
+                    'italic': True
+                })
+
+            last_pos = match.end()
+
+        # 添加剩余的普通文本
+        if last_pos < len(text):
+            parts.append({
+                'text': text[last_pos:],
+                'bold': False,
+                'italic': False
+            })
+
+        # 如果没有匹配到任何格式，返回原始文本
+        if not parts:
+            parts.append({
+                'text': text,
+                'bold': False,
+                'italic': False
+            })
+
+        return parts
+
     def parse(self) -> List[dict]:
         """解析 Markdown 内容为结构化数据"""
         elements = []
@@ -141,6 +292,15 @@ class MarkdownParser:
                     i = next_i
                     continue
 
+            # 处理列表
+            is_list, _, _ = self._is_list_item(line)
+            if is_list:
+                list_data, next_i = self._parse_list(i)
+                if list_data:
+                    elements.append(list_data)
+                    i = next_i
+                    continue
+
             # 处理独立的图片
             img_match = re.match(r'^!\[([^\]]*)\]\(([^\)]+)\)\s*$', line)
             if img_match:
@@ -159,13 +319,17 @@ class MarkdownParser:
                 i += 1
                 continue
 
-            # 处理普通段落（可能包含行内图片）
+            # 处理普通段落（可能包含行内图片和格式）
             paragraph_lines = []
             while i < len(self.lines) and self.lines[i].strip():
                 if self.lines[i].startswith('#') or self.lines[i].strip().startswith('```'):
                     break
                 # 检查是否是表格行
                 if self._is_table_row(self.lines[i]):
+                    break
+                # 检查是否是列表项
+                is_list_item, _, _ = self._is_list_item(self.lines[i])
+                if is_list_item:
                     break
                 # 检查是否是独立图片行
                 if re.match(r'^!\[([^\]]*)\]\(([^\)]+)\)\s*$', self.lines[i]):
@@ -182,9 +346,12 @@ class MarkdownParser:
                     parts = re.split(img_pattern, paragraph_text)
                     for idx, part in enumerate(parts):
                         if idx % 3 == 0 and part.strip():  # 文本部分
+                            # 解析行内格式
+                            formatted_parts = self._parse_inline_formatting(part.strip())
                             elements.append({
                                 'type': 'paragraph',
-                                'content': part.strip()
+                                'content': part.strip(),
+                                'formatted_parts': formatted_parts
                             })
                         elif idx % 3 == 2:  # 图片 URL
                             alt_text = parts[idx - 1]
@@ -194,9 +361,12 @@ class MarkdownParser:
                                 'url': part
                             })
                 else:
+                    # 解析行内格式
+                    formatted_parts = self._parse_inline_formatting(paragraph_text)
                     elements.append({
                         'type': 'paragraph',
-                        'content': paragraph_text
+                        'content': paragraph_text,
+                        'formatted_parts': formatted_parts
                     })
 
         return elements
@@ -244,14 +414,25 @@ class DocxConverter:
         # 设置行间距
         paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
 
-    def add_paragraph(self, text: str):
+    def add_paragraph(self, text: str, formatted_parts: Optional[List[dict]] = None):
         """添加段落"""
         paragraph = self.document.add_paragraph()
-        run = paragraph.add_run(text)
 
-        # 设置四号字
-        run.font.size = self.FONT_SIZE_4
-        self.set_song_font(run)
+        # 如果有格式化的部分，使用格式化文本
+        if formatted_parts:
+            for part in formatted_parts:
+                run = paragraph.add_run(part['text'])
+                run.font.size = self.FONT_SIZE_4
+                self.set_song_font(run)
+                if part.get('bold'):
+                    run.font.bold = True
+                if part.get('italic'):
+                    run.font.italic = True
+        else:
+            # 普通文本
+            run = paragraph.add_run(text)
+            run.font.size = self.FONT_SIZE_4
+            self.set_song_font(run)
 
         # 设置段落格式
         paragraph.paragraph_format.first_line_indent = Pt(28)  # 2字符缩进（约28磅）
@@ -323,6 +504,7 @@ class DocxConverter:
                     caption.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
             except Exception as e:
+                print(traceback.format_exc())
                 print(f"警告: 无法插入图片 {url}: {str(e)}")
                 # 添加替代文本
                 self.add_paragraph(f"[图片: {alt_text or url}]")
@@ -369,6 +551,122 @@ class DocxConverter:
         # 在表格后添加一个空段落，避免格式问题
         self.document.add_paragraph()
 
+    def add_list(self, list_type: str, items: List[dict]):
+        """添加列表（有序或无序）"""
+        # 确定列表样式
+        list_style = 'List Bullet' if list_type == 'unordered' else 'List Number'
+
+        for item in items:
+            # 创建列表段落
+            paragraph = self.document.add_paragraph(style=list_style)
+
+            # 解析列表项中的行内格式
+            content = item.get('content', '')
+            formatted_parts = self._parse_inline_formatting(content)
+
+            # 清除默认创建的 run（如果有）
+            if paragraph.runs:
+                for run in paragraph.runs:
+                    run.text = ''
+
+            # 添加格式化的文本
+            for part in formatted_parts:
+                if part['text']:  # 只添加非空文本
+                    run = paragraph.add_run(part['text'])
+                    run.font.size = self.FONT_SIZE_4
+                    self.set_song_font(run)
+                    if part.get('bold'):
+                        run.font.bold = True
+                    if part.get('italic'):
+                        run.font.italic = True
+
+            # 设置行间距
+            paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+
+        # 在列表后添加一个空段落，避免格式问题
+        self.document.add_paragraph()
+
+    def _parse_inline_formatting(self, text: str) -> List[dict]:
+        """
+        解析行内格式（加粗、斜体等）
+        返回格式化的文本片段列表
+        """
+        parts = []
+        # 匹配加粗和斜体的模式
+        # 优先级：加粗斜体 > 加粗 > 斜体
+        pattern = r'(\*\*\*([^*]+)\*\*\*|\*\*([^*]+)\*\*|\*([^*]+)\*|__([^_]+)__|_([^_]+)_)'
+
+        last_pos = 0
+        for match in re.finditer(pattern, text):
+            # 添加匹配前的普通文本
+            if match.start() > last_pos:
+                parts.append({
+                    'text': text[last_pos:match.start()],
+                    'bold': False,
+                    'italic': False
+                })
+
+            # 处理匹配的格式
+            full_match = match.group(0)
+            # 加粗斜体: ***text***
+            if full_match.startswith('***') and full_match.endswith('***'):
+                content = match.group(2)
+                parts.append({
+                    'text': content,
+                    'bold': True,
+                    'italic': True
+                })
+            # 加粗: **text** 或 __text__
+            elif full_match.startswith('**') and full_match.endswith('**'):
+                content = match.group(3)
+                parts.append({
+                    'text': content,
+                    'bold': True,
+                    'italic': False
+                })
+            elif full_match.startswith('__') and full_match.endswith('__'):
+                content = match.group(5)
+                parts.append({
+                    'text': content,
+                    'bold': True,
+                    'italic': False
+                })
+            # 斜体: *text* 或 _text_
+            elif full_match.startswith('*') and full_match.endswith('*'):
+                content = match.group(4)
+                parts.append({
+                    'text': content,
+                    'bold': False,
+                    'italic': True
+                })
+            elif full_match.startswith('_') and full_match.endswith('_'):
+                content = match.group(6)
+                parts.append({
+                    'text': content,
+                    'bold': False,
+                    'italic': True
+                })
+
+            last_pos = match.end()
+
+        # 添加剩余的普通文本
+        if last_pos < len(text):
+            parts.append({
+                'text': text[last_pos:],
+                'bold': False,
+                'italic': False
+            })
+
+        # 如果没有匹配到任何格式，返回原始文本
+        if not parts:
+            parts.append({
+                'text': text,
+                'bold': False,
+                'italic': False
+            })
+
+        return parts
+
     def convert(self, elements: List[dict]) -> Document:
         """转换元素列表为 DOCX 文档"""
         for element in elements:
@@ -377,13 +675,16 @@ class DocxConverter:
             if element_type == 'heading':
                 self.add_heading(element['content'], element['level'])
             elif element_type == 'paragraph':
-                self.add_paragraph(element['content'])
+                formatted_parts = element.get('formatted_parts')
+                self.add_paragraph(element['content'], formatted_parts)
             elif element_type == 'code':
                 self.add_code(element['content'], element.get('language', ''))
             elif element_type == 'image':
                 self.add_image(element['url'], element.get('alt', ''))
             elif element_type == 'table':
                 self.add_table(element['headers'], element['rows'])
+            elif element_type == 'list':
+                self.add_list(element['list_type'], element['items'])
 
         return self.document
 
@@ -410,6 +711,7 @@ def convert_md_to_docx(md_content: str, image_width: float = 5.0):
     except Exception as e:
         return 0, None
 
+
 class Md2docxTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
 
@@ -420,7 +722,7 @@ class Md2docxTool(Tool):
             yield self.create_text_message("No markdown content provided.")
             return
 
-        status,  file_bytes= convert_md_to_docx(md_content, output_name)
+        status, file_bytes = convert_md_to_docx(md_content)
         if status == 1:
             yield self.create_text_message(f"Document '{output_name}' generated successfully")
             yield self.create_blob_message(
